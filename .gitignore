@@ -1,0 +1,8 @@
+Jaguar.sln
+Debug/*
+.vs/*
+Jaguar/Debug/*
+Jaguar.vcxproj
+Jaguar.vcxproj.filters
+Jaguar.vcxproj.user
+/Jaguar/.vs/Jaguar/v15
