@@ -29,8 +29,8 @@ bool overflow = false;
 Jaguar seek_around(Jaguar, float);
 ofstream file;
 ofstream check;
-string output = "answer.csv";
-string paste = "check.txt";
+string output = "answer2.csv";
+string paste = "check2.txt";
 
 void write_csv(){
 	file.open(output.c_str());
@@ -232,7 +232,7 @@ Jaguar seek_around(Jaguar current, float step){
 		better_dir.direction = -1;
 	}
 	
-	if(better_dir.fitness > current.fitness){
+	if(better_dir.fitness >= current.fitness){
 		better_dir = current;
 		better_dir.direction = 0;
 	}
