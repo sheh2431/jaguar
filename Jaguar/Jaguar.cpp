@@ -7,12 +7,14 @@
 #include <string>
 
 using namespace std;
+/* ===== for numerical function minimum optimization =====*/
 
 struct Jaguar{
 	float position;
 	double fitness;
 	int direction;
 	float step;
+	int cal_times;
 };
 
 float domain_upper;
@@ -25,12 +27,14 @@ float init_step;
 bool overflow = false;
 
 Jaguar seek_around(Jaguar, float);
-//fstream file;
 ofstream file;
+ofstream check;
 string output = "answer.csv";
+string paste = "check.txt";
 
 void write_csv(){
 	file.open(output.c_str());
+	check.open(paste.c_str());
 }
 
 double fitness(float pos){
@@ -51,6 +55,7 @@ void update_best(Jaguar best){
 		JA_best.position = best.position;
 		JA_best.fitness = best.fitness;
 		JA_best.direction = best.direction;
+		JA_best.cal_times = best.cal_times;
 	}
 	file << "JA_best" << "," << JA_best.position << "," << JA_best.fitness << endl;
 }
@@ -66,40 +71,26 @@ bool cmp_fitness(Jaguar now, Jaguar cmp){
 Jaguar random_pos(){
 	Jaguar init;
 	float rn = rand();
-	//cout << "RANDOM: " << rn << endl;
-	//cout << "RAND_MAX: " << RAND_MAX << endl;
 	float pos=(rn/(float)RAND_MAX) * (domain_upper - domain_lower) + domain_lower;
 	init.position = pos;
 	init.fitness = fitness(pos);
 	file << "POS" << "," << init.position << "," << "fitness" << "," << init.fitness << "," << "RAND" << "," << rn << endl;
+	init.cal_times = calculate_times;
 	update_best(init);
 	return init;
 }
 
-int check_fitness(Jaguar r_f, Jaguar l_f){
+int check_LR_better(Jaguar r_f, Jaguar l_f){
 	bool better = false;
 	Jaguar best;
 	int direction = 0;
-	if(r_f.fitness < l_f.fitness){
-		//better = cmp_fitness(r_f, JA);
-		//if(better){
+	if(r_f.fitness <= l_f.fitness){
 			best = r_f;
 			direction = 1;
-		//}
 	}
 	else if(r_f.fitness > l_f.fitness){
-		//better = cmp_fitness(l_f, JA);
-		//if(better){
 			best = l_f;
 			direction = -1;
-		//}
-	}
-	else if(r_f.fitness == l_f.fitness){
-		//better = cmp_fitness(r_f, JA);
-		//if(better){
-			best = r_f;
-			direction = 1;
-		//}
 	}
 	
 	return direction;
@@ -118,8 +109,12 @@ Jaguar slow_down(Jaguar current){
 	next.position = last.position + (step * direction);
 	if(next.position >= domain_lower && next.position <= domain_upper){
 		next.fitness = fitness(next.position);
+		next.cal_times = calculate_times;
 		file << calculate_times << "," << next.position << "," << next.fitness << ",";
 		file << "STEP" << "," << step << endl ;
+		cout << "STEP" << "," << step << endl;
+		cout << calculate_times << "," << next.position << "," << next.fitness << endl;
+		check << calculate_times << "\t" << next.position << "\t" << next.fitness << "\t" << step << endl;
 		if(next.fitness > last.fitness) next = last;
 		update_best(next);
 	}
@@ -129,13 +124,13 @@ Jaguar slow_down(Jaguar current){
 		next = last;
 	}
 	
-	do{
+	while (init_step != step){
 		step /= 2;
 		next = seek_around(next, step);
 		update_best(next);
 		if(overflow) break;
 		file << "NEXT_DIRECTION" << "," << next.direction << endl;
-	}while(init_step != step);
+	}
 	file << "current step" << "," << step << endl;
 	file << "========== END of SLOW DOWN =========" << endl;
 	
@@ -156,8 +151,13 @@ Jaguar speed_up(Jaguar current, float step){
 		next.position = last.position + (step * direction);
 		if(next.position >= domain_lower && next.position <= domain_upper){
 			next.fitness = fitness(next.position);
+			next.cal_times = calculate_times;
 			file << calculate_times << "," << next.position << "," << next.fitness << ",";
 			file << "STEP" << "," << step << endl;
+			cout << "STEP" << "," << step << endl;
+			cout << calculate_times << "," << next.position << "," << next.fitness << endl;
+			check << calculate_times << "\t" << next.position << "\t" << next.fitness << "\t" << step << endl;
+			
 			update_best(next);
 			loop = true;
 		}
@@ -169,6 +169,8 @@ Jaguar speed_up(Jaguar current, float step){
 		}
 	}while(next.fitness <= last.fitness);
 	next.fitness = JA_best.fitness;
+	next.position = JA_best.position;
+	next.cal_times = JA_best.cal_times;
 	next.direction = direction;
 	next.step = step;
 	
@@ -184,10 +186,11 @@ bool check_pos(float current, float right, float left){
 
 Jaguar seek_around(Jaguar current, float step){
 	float pos = current.position;
-
+	if (calculate_times == 177)
+		cout << "WAIT!!!!!" << endl;
 	file << "===== SEEK AROUND =====" << endl;
 	file << "NOW" << "," << current.position << "," <<current.fitness << ",";
-	cout << "NOW" << "," << fixed << setprecision(20) << current.position << "," <<current.fitness << ",";
+	cout << "NOW" << "," << current.position << "," <<current.fitness << ",";
 	cout << endl;
 	file << "STEP" << "," << step << endl;
 	Jaguar right, left, better_dir;
@@ -201,32 +204,32 @@ Jaguar seek_around(Jaguar current, float step){
 	}
 	if(right.position >= domain_lower && right.position <= domain_upper){
 		right.fitness = fitness(right.position);
+		right.cal_times = calculate_times;
 		file << calculate_times << "," << "RIGHT" << "," <<right.position << "," << right.fitness << endl;
 		cout << calculate_times << "," << "RIGHT" << "," <<right.position << "," << right.fitness << endl;
+		check << calculate_times << "\t" << right.position << "\t" << right.fitness << "\t" << step << endl;
 	}
 	else right.fitness = 9999;
 	
 	if(left.position >= domain_lower && left.position <= domain_upper){
 		left.fitness = fitness(left.position);
+		left.cal_times = calculate_times;
 		file << calculate_times << "," << "LEFT" << "," << left.position << "," << left.fitness << endl;
 		cout << calculate_times << "," << "LEFT" << "," <<left.position << "," << left.fitness << endl;
+		check << calculate_times << "\t" << left.position << "\t" << left.fitness << "\t" << step << endl;
 	}
 	else right.fitness = 9999;
 	
 	int better;
-	better = check_fitness(right, left);
+	better = check_LR_better(right, left);
 
 	if(better == 1){
-		//update_best(right);
 		better_dir = right;
 		better_dir.direction = 1;
-		//speed_up(current, step, 1);
 	}
 	else if(better == -1){
-		//update_best(left);
 		better_dir = left;
 		better_dir.direction = -1;
-		//speed_up(current, step, -1);
 	}
 	
 	if(better_dir.fitness > current.fitness){
@@ -245,16 +248,18 @@ int main(){
 	
 	srand(114);
 	write_csv();
-	file << fixed << setprecision(20);
+	file << fixed << setprecision(50);
+	check << fixed << setprecision(50);
+	cout << fixed << setprecision(50);
 	Jaguar JA;
 	JA_best.fitness = 9999;
 	int round = 1;
 	for(int i = 0; i< 1; i++){
 		init_step = initial(100.0, -100.0);
-		//file << "init_step: " << "," << init_step << endl;
 		JA = random_pos();
 		while(true){
 			file << "ROUND" << "," << round << endl;
+			file << "init_step: " << "," << init_step << endl;
 			JA = seek_around(JA, init_step);
 			file << "AFTER SEEK" << endl;
 			if(overflow == true){
@@ -269,6 +274,12 @@ int main(){
 			init_step /= 2;
 			round += 1;
 		}
+		cout << "THE BEST POSITION:  " << JA_best.position << endl;
+		cout << "THE BEST FITNESS: " << JA_best.fitness << endl;
+		cout << "THE BEST CALCULATION TIMES: " << JA_best.cal_times << endl;
+		file << "THE BEST POSITION" << "," << JA_best.position << endl;
+		file << "THE BEST FITNESS: " << "," << JA_best.fitness << endl;
+		file << "THE BEST CALCULATION TIMES: " << "," << JA_best.cal_times << endl;
 	}
 	system("pause");
 	file.close();
